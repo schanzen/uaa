@@ -33,7 +33,7 @@ import org.springframework.jmx.support.MetricType;
 @ManagedResource
 public class LoggingAuditService implements UaaAuditService {
 
-    private final Log logger = LogFactory.getLog("UAA.Audit");
+    private final Log logger = LogFactory.getLog("auditLogger");
 
     private AtomicInteger userAuthenticationCount = new AtomicInteger();
 
