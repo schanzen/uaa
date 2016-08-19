@@ -15,6 +15,7 @@ package org.cloudfoundry.identity.uaa.provider.oauth;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.commons.codec.binary.Base64;
+import org.cloudfoundry.identity.uaa.authentication.UaaAuthentication;
 import org.cloudfoundry.identity.uaa.authentication.manager.ExternalGroupAuthorizationEvent;
 import org.cloudfoundry.identity.uaa.authentication.manager.ExternalLoginAuthenticationManager;
 import org.cloudfoundry.identity.uaa.authentication.manager.InvitedUserAuthenticatedEvent;
@@ -76,6 +77,36 @@ public class XOAuthAuthenticationManager extends ExternalLoginAuthenticationMana
     }
 
     @Override
+    protected UaaAuthentication populateAuthenticationDetails(XOAuthAuthenticationManager.AuthDetails authDetails, UaaAuthentication authentication) {
+        if(authDetails.getConfig() instanceof XOIDCIdentityProviderDefinition){
+            Map<String, Object> claims = authDetails.getClaims();
+            authentication.setAuthenticationMethods((String[]) claims.get("amr"));
+
+        } else {
+            authentication.setAuthenticationMethods("pwd");
+        }
+        return authentication;
+    }
+
+    public static class AuthDetails {
+        public AbstractXOAuthIdentityProviderDefinition config;
+        public Map<String, Object> claims;
+
+        public AuthDetails(AbstractXOAuthIdentityProviderDefinition config, Map<String, Object> claims) {
+            this.config = config;
+            this.claims = claims;
+        }
+
+        public AbstractXOAuthIdentityProviderDefinition getConfig() {
+            return config;
+        }
+
+        public Map<String, Object> getClaims() {
+            return claims;
+        }
+    }
+
+    @Override
     protected UaaUser getUser(Authentication request) {
         XOAuthCodeToken codeToken = (XOAuthCodeToken) request;
         setOrigin(codeToken.getOrigin());
@@ -103,6 +134,8 @@ public class XOAuthAuthenticationManager extends ExternalLoginAuthenticationMana
             if (email == null) {
                 email = generateEmailIfNull(username);
             }
+
+            setAuthenticationDetails(new AuthDetails(config, claims));
 
             return new UaaUser(
                 new UaaUserPrototype()

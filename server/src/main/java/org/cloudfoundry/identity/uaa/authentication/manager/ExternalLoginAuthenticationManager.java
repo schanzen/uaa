@@ -23,6 +23,7 @@ import org.cloudfoundry.identity.uaa.authentication.UaaAuthentication;
 import org.cloudfoundry.identity.uaa.authentication.UaaAuthenticationDetails;
 import org.cloudfoundry.identity.uaa.authentication.UaaPrincipal;
 import org.cloudfoundry.identity.uaa.authentication.event.UserAuthenticationSuccessEvent;
+import org.cloudfoundry.identity.uaa.provider.oauth.XOAuthAuthenticationManager;
 import org.cloudfoundry.identity.uaa.user.DialableByPhone;
 import org.cloudfoundry.identity.uaa.user.ExternallyIdentifiable;
 import org.cloudfoundry.identity.uaa.user.Mailable;
@@ -52,7 +53,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
-public class ExternalLoginAuthenticationManager implements AuthenticationManager, ApplicationEventPublisherAware, BeanNameAware {
+public class ExternalLoginAuthenticationManager<AuthDetails> implements AuthenticationManager, ApplicationEventPublisherAware, BeanNameAware {
 
     protected final Log logger = LogFactory.getLog(getClass());
 
@@ -86,6 +87,17 @@ public class ExternalLoginAuthenticationManager implements AuthenticationManager
 
     public UaaUserDatabase getUserDatabase() {
         return this.userDatabase;
+    }
+
+    protected UaaAuthentication populateAuthenticationDetails(XOAuthAuthenticationManager.AuthDetails authDetails, UaaAuthentication authentication) {
+        authentication.setAuthenticationMethods("pwd");
+        return authentication;
+    }
+
+    private ThreadLocal<XOAuthAuthenticationManager.AuthDetails> authDetails = new ThreadLocal<XOAuthAuthenticationManager.AuthDetails>();
+
+    protected void setAuthenticationDetails(XOAuthAuthenticationManager.AuthDetails authDetails) {
+        this.authDetails.set(authDetails);
     }
 
     @Override
@@ -126,11 +138,13 @@ public class ExternalLoginAuthenticationManager implements AuthenticationManager
             uaaAuthenticationDetails = UaaAuthenticationDetails.UNKNOWN;
         }
         UaaAuthentication success = new UaaAuthentication(new UaaPrincipal(user), user.getAuthorities(), uaaAuthenticationDetails);
+        success = populateAuthenticationDetails(this.authDetails.get(), success);
         if (request.getPrincipal() instanceof UserDetails) {
             UserDetails userDetails = (UserDetails) request.getPrincipal();
             success.setUserAttributes(getUserAttributes(userDetails));
             success.setExternalGroups(new HashSet<>(getExternalUserAuthorities(userDetails)));
         }
+
         publish(new UserAuthenticationSuccessEvent(user, success));
         return success;
     }

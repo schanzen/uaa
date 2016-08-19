@@ -50,6 +50,7 @@ public class UaaAuthentication implements Authentication, Serializable {
     //This is used when UAA acts as a SAML IdP
     @JsonIgnore
     private SAMLMessageContext samlMessageContext;
+    private String[] authenticationMethods;
 
     /**
      * Creates a token with the supplied array of authorities.
@@ -211,4 +212,11 @@ public class UaaAuthentication implements Authentication, Serializable {
         this.samlMessageContext = samlMessageContext;
     }
 
+    public void setAuthenticationMethods(String... authenticationMethods) {
+        this.authenticationMethods = authenticationMethods;
+    }
+
+    public String[] getAuthenticationMethods() {
+        return authenticationMethods;
+    }
 }
